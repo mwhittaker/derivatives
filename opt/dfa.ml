@@ -25,6 +25,13 @@ type t = {
   delta: delta;
 }
 
+let alphabet =
+  Core.Std.String.to_list @@ String.concat "" [
+    "abcdefghijklmnopqrstuvwxyz";
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    "0123456789";
+  ]
+
 let to_string {states; start; accepting_states; delta} =
   let states_to_string states =
     States.elements states
@@ -86,7 +93,6 @@ and explore (states: States.t) (delta: delta) (q: state) =
   ignore @@ read_line ();
   *)
 
-  let alphabet = Core.Std.String.to_list "01" in
   List.fold_left (goto q) (states, delta) alphabet
 
 let from_re r =
