@@ -1,48 +1,102 @@
-module ReSet = Set.Make (
+type state = Re.t
+
+(* Q *)
+module States = Set.Make (
   struct
-    type t = Re.t
+    type t = state
     let compare = compare
   end
 )
 
+(* δ *)
 module Delta = Map.Make (
   struct
-    type t = Re.t * char
+    type t = state * char
     let compare = compare
   end
 )
 
-type delta = Re.t Delta.t
+type delta = state Delta.t
 
 type t = {
-  states: ReSet.t;
+  states: States.t;
   start: Re.t;
-  accepting_states: ReSet.t;
+  accepting_states: States.t;
   delta: delta;
 }
 
-let rec goto q (states, delta) c =
+let to_string {states; start; accepting_states; delta} =
+  let states_to_string states =
+    States.elements states
+    |> List.map Re.to_string
+    |> String.concat ", "
+    |> fun s -> "(" ^ s ^ ")"
+  in
+
+  let delta_to_string delta =
+    Delta.bindings delta
+    |> List.map (fun ((q, c), q') -> (Re.to_string q, c, Re.to_string q'))
+    |> List.map (fun (q, c, q') -> Printf.sprintf "(%s, %c) -> %s" q c q')
+    |> String.concat ", "
+    |> fun s -> "(" ^ s ^ ")"
+  in
+
+  let states_string = "Q = " ^ states_to_string states in
+  let start_string = "q0 = " ^ Re.to_string start in
+  let accepting_states_string = "F = " ^ states_to_string accepting_states in
+  let delta_string = "δ = " ^ delta_to_string delta in
+
+  String.concat "\n" [
+    states_string;
+    start_string;
+    accepting_states_string;
+    delta_string;
+  ]
+
+let rec goto (q: state) ((states, delta): States.t * delta) (c: char) =
+  (*
+  let dfa = {
+    states = states;
+    start = q;
+    delta = delta;
+    accepting_states = States.empty;
+  } in
+  print_endline ("\ngoto with DFA \n" ^ (to_string dfa));
+  print_endline @@ "c = " ^ Core.Std.Char.to_string c;
+  ignore @@ read_line ();
+  *)
+
   let qc = Re.dc c q in
-  if ReSet.mem qc states then
+  if States.mem qc states then
     (states, Delta.add (q, c) qc delta)
   else
-    let states' = ReSet.add qc states in
+    let states' = States.add qc states in
     let delta' = Delta.add (q, c) qc delta in
     explore states' delta' qc
 
-and explore states delta q =
-  let alphabet = Core.Std.String.to_list "01abc" in
+and explore (states: States.t) (delta: delta) (q: state) =
+  (*
+  let dfa = {
+    states = states;
+    start = q;
+    delta = delta;
+    accepting_states = States.empty;
+  } in
+  print_endline ("\nexplore with DFA \n" ^ (to_string dfa));
+  ignore @@ read_line ();
+  *)
+
+  let alphabet = Core.Std.String.to_list "01" in
   List.fold_left (goto q) (states, delta) alphabet
 
-let of_re r =
+let from_re r =
   let start = r in
-  let delta = Delta.empty in
-  let (states, delta) = explore (ReSet.singleton start) delta start in
-  let accepting_states = ReSet.filter (fun q -> Re.v q = Re.epsilon) states in
+  let (states, delta) = explore (States.singleton start) (Delta.empty) start in
+  let accepting_states = States.filter (fun q -> Re.v q = Re.epsilon) states in
   {states; start; accepting_states; delta}
 
-let transition {start; delta; accepting_states; _} s =
-  let step delta q c =
+let transition ({start; delta; _}: t) (s: string) =
+  let step (delta: delta) (q: state option) (c: char) =
     let open Core.Std.Option in
     q >>= fun q ->
     if Delta.mem (q, c) delta
@@ -54,4 +108,4 @@ let transition {start; delta; accepting_states; _} s =
 let matches dfa s =
   match transition dfa s with
   | None -> false
-  | Some q -> ReSet.mem q dfa.accepting_states
+  | Some q -> States.mem q dfa.accepting_states
