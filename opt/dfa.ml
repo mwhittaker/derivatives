@@ -61,18 +61,6 @@ let to_string {states; start; accepting_states; delta} =
   ]
 
 let rec goto (q: state) ((states, delta): States.t * delta) (c: char) =
-  (*
-  let dfa = {
-    states = states;
-    start = q;
-    delta = delta;
-    accepting_states = States.empty;
-  } in
-  print_endline ("\ngoto with DFA \n" ^ (to_string dfa));
-  print_endline @@ "c = " ^ Core.Std.Char.to_string c;
-  ignore @@ read_line ();
-  *)
-
   let qc = Re.dc c q in
   if States.mem qc states then
     (states, Delta.add (q, c) qc delta)
@@ -82,17 +70,6 @@ let rec goto (q: state) ((states, delta): States.t * delta) (c: char) =
     explore states' delta' qc
 
 and explore (states: States.t) (delta: delta) (q: state) =
-  (*
-  let dfa = {
-    states = states;
-    start = q;
-    delta = delta;
-    accepting_states = States.empty;
-  } in
-  print_endline ("\nexplore with DFA \n" ^ (to_string dfa));
-  ignore @@ read_line ();
-  *)
-
   List.fold_left (goto q) (states, delta) alphabet
 
 let from_re r =
